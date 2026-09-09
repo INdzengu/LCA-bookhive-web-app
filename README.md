@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 📚 BookHive - Secondhand Book Marketplace
 
 A full-stack web application for students to buy and sell secondhand books efficiently. BookHive provides a seamless marketplace experience with secure authentication, real-time inventory management, and integrated payment processing.
@@ -505,3 +506,6 @@ _Life Choices Academy | YouthCode Cohort 2_
 
 **Last Updated**: September 2026  
 **Status**: Active Development
+=======
+
+>>>>>>> 07acf5654700b58f90cdc916ce839e092594663c
