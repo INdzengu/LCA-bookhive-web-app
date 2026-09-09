@@ -46,7 +46,6 @@
                 class="form-control"
                 placeholder="Enter the book title"
                 minlength="4"
-                pattern="[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s'-]{3,}"
                 required
               />
 
@@ -68,7 +67,7 @@
                 class="form-control"
                 placeholder="Enter the author's name"
                 minlength="4"
-                pattern="[A-Za-zÀ-ÿ]+([.'-][A-Za-zÀ-ÿ]+|[ ]+)*"
+                pattern="[A-Za-zÀ-ÿ\s\-'.]*"
                 required
               />
 

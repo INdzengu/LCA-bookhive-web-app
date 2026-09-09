@@ -11,6 +11,7 @@ import ReviewsView from "../views/ReviewsView.vue";
 import AdminReviewsView from "../views/AdminReviewsView.vue";
 
 const routes = [
+   { path: "/", redirect: "/browse" },
   { path: "/browse", name: "Browse", component: BrowseBooks },
   { path: "/sell", name: "Sell", component: SellBooks },
   { path: "/cart", name: "Cart", component: CartView },

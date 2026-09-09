@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+
 # 📚 BookHive - Secondhand Book Marketplace
 
 A full-stack web application for students to buy and sell secondhand books efficiently. BookHive provides a seamless marketplace experience with secure authentication, real-time inventory management, and integrated payment processing.
@@ -111,10 +112,7 @@ Start the backend server:
 
 ```bash
 # Development mode (with auto-reload)
-npm run dev
-
-# Production mode
-npm start
+npm --watch server.js
 ```
 
 The backend API will be available at `http://localhost:5000`
@@ -150,8 +148,6 @@ The frontend will be available at `http://localhost:5173` (or the port shown in 
 ### 4. Database Setup
 
 #### Option A: Import Existing Schema
-
-If you already have the BookHive database, import the schema:
 
 ```bash
 mysql -u root -p bookhive_db < bookhive_schema.sql
@@ -269,6 +265,11 @@ LCA-bookhive-web-app/
 4. Token stored in localStorage (or session storage)
 5. Token included in Authorization header for subsequent requests
 
+Current login details for admins
+
+Yonela Mjele - Username & Password - YMjele@yahoo.com
+Sinalo Joni - Username & Password - SJoni@gmail.com
+
 ---
 
 ## 🛒 Core Features
@@ -356,9 +357,11 @@ LCA-bookhive-web-app/
 For detailed API documentation, refer to your backend `routes/` directory.
 
 ---
+
 ## Payment System Approach
 
 ### Why PayFast?
+
 - Supports South African users (your primary market)
 - Easy integration with Node.js backend
 - Secure & PCI-compliant
@@ -366,6 +369,7 @@ For detailed API documentation, refer to your backend `routes/` directory.
 - Clear documentation
 
 ### Payment Flow
+
 1. User adds books to cart
 2. Proceeds to checkout
 3. Selects PayFast payment
@@ -375,9 +379,11 @@ For detailed API documentation, refer to your backend `routes/` directory.
 7. Seller notified of sale
 
 ### Testing Payment
+
 - Use PayFast Sandbox mode
 - Test cards provided by PayFast
 - Verify transaction recorded in database
+
 ## 🧪 Testing
 
 ### Testing Payments (PayFast Sandbox)
@@ -508,4 +514,4 @@ _Life Choices Academy | YouthCode Cohort 2_
 **Status**: Active Development
 =======
 
->>>>>>> 07acf5654700b58f90cdc916ce839e092594663c
+> > > > > > > 07acf5654700b58f90cdc916ce839e092594663c

@@ -36,7 +36,7 @@
             class="form-control"
             v-model="form.full_name"
             placeholder="Enter your full name"
-            pattern="[A-Za-zÀ-ÿ]+([ '-][A-Za-zÀ-ÿ]+)*"
+            pattern="[A-Za-zÀ-ÿ\s]+"
             minlength="4"
             required
           />
