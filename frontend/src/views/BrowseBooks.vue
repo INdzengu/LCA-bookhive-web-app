@@ -227,9 +227,30 @@
 </template>
 
 <script>
+/**
+ * ============================================
+ * BROWSE BOOKS VIEW
+ * ============================================
+ * This page displays all available books in the BookHive marketplace.
+ * Features include:
+ * - Display books in a grid layout
+ * - Search and filter by title, author, category
+ * - Add books to cart
+ * - Show book details (price, condition, availability, seller)
+ *
+ * Business Logic:
+ * - Fetches products from backend API on mount
+ * - Filters books based on user input (client-side)
+ * - Shows loading and error states
+ * - Generates styled book covers based on category
+ */
+
 export default {
   name: "BrowseBooks",
 
+  /**
+   * Props passed from parent component (App.vue)
+   */
   props: {
     user: {
       type: Object,
@@ -237,14 +258,40 @@ export default {
     },
   },
 
+  /**
+   * Events emitted to parent component
+   */
   emits: ["add-to-cart"],
 
+  /**
+   * ============================================
+   * DATA PROPERTIES
+   * ============================================
+   */
   data() {
     return {
+      /**
+       * Array of all books fetched from backend
+       * Structure: [{ product_id, title, author, price, category_name, condition_name, ... }]
+       */
       books: [],
+
+      /**
+       * Loading indicator while fetching books from API
+       */
       loading: false,
+
+      /**
+       * Error message displayed if API call fails
+       */
       errorMessage: "",
 
+      /**
+       * Filter object containing search/filter criteria
+       * title: Search books by title
+       * author: Search books by author name
+       * category: Filter by book category
+       */
       filters: {
         title: "",
         author: "",
@@ -253,18 +300,39 @@ export default {
     };
   },
 
+  /**
+   * ============================================
+   * COMPUTED PROPERTIES
+   * ============================================
+   */
   computed: {
-    /*
-     * Return unique categories from the API.
+    /**
+     * Extract unique categories from all books
+     * Used to populate the category filter dropdown
+     *
+     * Flow:
+     * 1. Map books to their category_name
+     * 2. Filter out empty values
+     * 3. Remove duplicates using Set
+     * 4. Convert back to array
+     * 5. Sort alphabetically
      */
     categories() {
       return [...new Set(this.books.map((book) => book.category_name).filter(Boolean))].sort();
     },
 
-    /*
-     * Filter books using title, author and category.
+    /**
+     * Filter books based on current filter criteria
+     * Applied client-side (frontend) for instant results
      *
-     * Multiple filters can be used at the same time.
+     * Filter logic:
+     * 1. Convert search terms to lowercase for case-insensitive matching
+     * 2. Check if book title includes search term (if provided)
+     * 3. Check if book author includes search term (if provided)
+     * 4. Check if book category matches selected category (if provided)
+     * 5. Return books that match ALL active filters
+     *
+     * Returns: Array of filtered books
      */
     filteredBooks() {
       const titleSearch = this.filters.title.trim().toLowerCase();
@@ -272,27 +340,42 @@ export default {
       const selectedCategory = this.filters.category;
 
       return this.books.filter((book) => {
+        /**
+         * Check if book title matches search
+         * If no search term, this condition is always true
+         */
         const matchesTitle =
           !titleSearch ||
           String(book.title || "")
             .toLowerCase()
             .includes(titleSearch);
 
+        /**
+         * Check if book author matches search
+         */
         const matchesAuthor =
           !authorSearch ||
           String(book.author || "")
             .toLowerCase()
             .includes(authorSearch);
 
+        /**
+         * Check if book category matches selected category
+         */
         const matchesCategory = !selectedCategory || book.category_name === selectedCategory;
 
+        /**
+         * All three conditions must be true
+         */
         return matchesTitle && matchesAuthor && matchesCategory;
       });
     },
 
-    /*
-     * Used to decide whether the Clear Filters button
-     * and active-filter indicators should appear.
+    /**
+     * Check if any filters are currently active
+     * Used to show/hide "Clear Filters" button and active filter indicators
+     *
+     * Returns: true if at least one filter has a value
      */
     hasActiveFilters() {
       return (
@@ -303,13 +386,42 @@ export default {
     },
   },
 
+  /**
+   * ============================================
+   * LIFECYCLE HOOKS
+   * ============================================
+   */
+
+  /**
+   * mounted(): Called after component is inserted into DOM
+   * Automatically fetch books when page loads
+   */
   mounted() {
     this.fetchBooks();
   },
 
+  /**
+   * ============================================
+   * METHODS
+   * ============================================
+   */
   methods: {
-    /*
-     * Load books from the backend.
+    /**
+     * ============================================
+     * fetchBooks()
+     * ============================================
+     * Purpose: Load all books from backend API
+     *
+     * Process:
+     * 1. Set loading = true (show loading spinner)
+     * 2. Make GET request to /api/products
+     * 3. Validate response
+     * 4. Store books in this.books
+     * 5. Handle errors
+     * 6. Set loading = false (hide loading spinner)
+     *
+     * API Endpoint: GET /api/products
+     * Returns: { success: boolean, data: [books...], message: string }
      */
     async fetchBooks() {
       this.loading = true;
@@ -320,10 +432,12 @@ export default {
 
         const data = await response.json();
 
+        // Check if API response indicates success
         if (!response.ok || !data.success) {
           throw new Error(data.message || "Unable to load books.");
         }
 
+        // Store books in component data
         this.books = data.data || [];
       } catch (error) {
         console.error("Failed to load books:", error);
@@ -334,8 +448,12 @@ export default {
       }
     },
 
-    /*
-     * Reset all filters.
+    /**
+     * ============================================
+     * clearFilters()
+     * ============================================
+     * Purpose: Reset all search/filter fields to empty
+     * Used when "Clear Filters" button is clicked
      */
     clearFilters() {
       this.filters = {
@@ -345,9 +463,17 @@ export default {
       };
     },
 
-    /*
-     * Generate a different visual cover style
-     * depending on the book category.
+    /**
+     * ============================================
+     * getCoverClass(category)
+     * ============================================
+     * Purpose: Return CSS class based on book category
+     * Used to style book covers differently for each category
+     *
+     * Parameters:
+     *   category (string): Book category name
+     *
+     * Returns: CSS class name for the cover styling
      */
     getCoverClass(category) {
       const categoryName = String(category || "").toLowerCase();
@@ -367,8 +493,17 @@ export default {
       return "cover-default";
     },
 
-    /*
-     * Short category label for the cover.
+    /**
+     * ============================================
+     * getShortCategory(category)
+     * ============================================
+     * Purpose: Generate a short label for the book cover
+     * Displayed in the top-left of the generated book cover
+     *
+     * Parameters:
+     *   category (string): Book category name
+     *
+     * Returns: Uppercase short category label (e.g., "TEXTBOOK", "NOVEL")
      */
     getShortCategory(category) {
       const categoryName = String(category || "");
@@ -388,8 +523,16 @@ export default {
       return "BOOK";
     },
 
-    /*
-     * Small label at the bottom of the generated cover.
+    /**
+     * ============================================
+     * getCategoryShortName(category)
+     * ============================================
+     * Purpose: Generate label for bottom-right of book cover
+     *
+     * Parameters:
+     *   category (string): Book category name
+     *
+     * Returns: Short descriptive label (e.g., "ACADEMIC", "LITERATURE")
      */
     getCategoryShortName(category) {
       const categoryName = String(category || "");
@@ -411,7 +554,6 @@ export default {
   },
 };
 </script>
-
 <style scoped>
 /* =========================================
    PAGE

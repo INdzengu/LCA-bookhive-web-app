@@ -59,29 +59,23 @@
 
             <!-- Author -->
             <div class="col-md-6">
-  <label for="book-author" class="form-label">
-    Author
-  </label>
+              <label for="book-author" class="form-label"> Author </label>
 
-  <input
-    id="book-author"
-    v-model.trim="form.author"
-    type="text"
-    class="form-control"
-    placeholder="Enter the author's name"
-    minlength="4"
-    pattern="[A-Za-zÀ-ÿ]+([.'-][A-Za-zÀ-ÿ]+|[ ]+)*"
-    required
-  />
+              <input
+                id="book-author"
+                v-model.trim="form.author"
+                type="text"
+                class="form-control"
+                placeholder="Enter the author's name"
+                minlength="4"
+                pattern="[A-Za-zÀ-ÿ]+([.'-][A-Za-zÀ-ÿ]+|[ ]+)*"
+                required
+              />
 
-  <div class="valid-feedback">
-    Author name looks good!
-  </div>
+              <div class="valid-feedback">Author name looks good!</div>
 
-  <div class="invalid-feedback">
-    Please enter appropriate author name
-  </div>
-</div>
+              <div class="invalid-feedback">Please enter appropriate author name</div>
+            </div>
             <!-- Course Code -->
             <div class="col-md-6">
               <label for="course-code" class="form-label">
@@ -215,54 +209,171 @@
 </template>
 
 <script>
+/**
+ * ============================================
+ * SELL BOOKS VIEW
+ * ============================================
+ * This page allows authenticated users to list books for sale
+ *
+ * Features:
+ * - Form to input book details
+ * - Validation of all inputs
+ * - Submit to backend to create product listing
+ * - Show success/error messages
+ * - Form reset after successful submission
+ */
+
 import axios from "axios";
 
 export default {
   name: "SellBooks",
 
+  /**
+   * Props passed from parent component (App.vue)
+   */
   props: {
+    /**
+     * user: Current logged-in user data
+     * null = not logged in, object = logged in user
+     * Page shows login message if user is null
+     */
     user: {
       type: Object,
       default: null,
     },
   },
 
+  /**
+   * ============================================
+   * DATA PROPERTIES
+   * ============================================
+   */
   data() {
     return {
+      /**
+       * Indicates whether form is being submitted
+       * true = show loading spinner on button
+       */
       isSubmitting: false,
+
+      /**
+       * Success or error message displayed after submission
+       */
       message: "",
+
+      /**
+       * Flag to indicate if message is error or success
+       * true = error message, false = success message
+       */
       isError: false,
+
+      /**
+       * Flag to track whether user has clicked submit
+       * Used to show Bootstrap validation errors only after submit attempt
+       */
       formSubmitted: false,
 
+      /**
+       * Book details form data
+       * Bound to form inputs with v-model
+       * Sent to backend when form is submitted
+       */
       form: {
+        /**
+         * title: Book title (required, 4+ characters)
+         */
         title: "",
+
+        /**
+         * author: Book author name (required, 4+ characters)
+         */
         author: "",
+
+        /**
+         * course_code: Course code for textbooks (optional)
+         * Example: "INF2001", "MAT1001"
+         */
         course_code: "",
+
+        /**
+         * price: Selling price in South African Rand (required, 0.01-3000)
+         */
         price: "",
+
+        /**
+         * category_id: Category of the book (required)
+         * 1 = School & University Textbooks
+         * 2 = Reading Novels
+         * 3 = Writing Books
+         */
         category_id: "",
+
+        /**
+         * condition_id: Physical condition of the book (required)
+         * 1 = Like New
+         * 2 = Good
+         * 3 = Fair
+         */
         condition_id: "",
       },
     };
   },
 
+  /**
+   * ============================================
+   * METHODS
+   * ============================================
+   */
   methods: {
+    /**
+     * ============================================
+     * submitListing()
+     * ============================================
+     * Purpose: Validate and submit book listing to backend
+     *
+     * Process:
+     * 1. Activate Bootstrap validation
+     * 2. Validate form inputs on client-side
+     * 3. Validate price range
+     * 4. Send POST request to backend
+     * 5. Handle success or error response
+     * 6. Reset form or show error message
+     */
     async submitListing() {
       this.message = "";
       this.isError = false;
 
-      // Get the Bootstrap form
+      // Get the form element
       const form = this.$refs.sellForm;
 
-      // Activate validation only after the user clicks Post Book
+      /**
+       * ============================================
+       * STEP 1: ENABLE BOOTSTRAP VALIDATION
+       * ============================================
+       * Bootstrap only shows validation errors after adding "was-validated" class
+       * This makes errors appear only after user tries to submit
+       */
       this.formSubmitted = true;
       form.classList.add("was-validated");
 
-      // Stop if Bootstrap validation fails
+      /**
+       * ============================================
+       * STEP 2: CHECK FORM VALIDITY
+       * ============================================
+       * checkValidity() checks HTML5 form constraints
+       * Returns false if any required field is empty or invalid
+       */
       if (!form.checkValidity()) {
         return;
       }
 
-      // Additional price validation
+      /**
+       * ============================================
+       * STEP 3: VALIDATE PRICE RANGE
+       * ============================================
+       * Additional check beyond HTML5 validation
+       * Price must be between R0.01 and R3,000
+       */
       const price = Number(this.form.price);
 
       if (price <= 0 || price > 3000) {
@@ -271,13 +382,23 @@ export default {
         return;
       }
 
+      /**
+       * All validation passed, start submission
+       */
       this.isSubmitting = true;
 
+      // Get backend API URL
       const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
+      // Get JWT token from localStorage
       const token = localStorage.getItem("token");
 
-      // Check authentication token
+      /**
+       * ============================================
+       * STEP 4: CHECK AUTHENTICATION
+       * ============================================
+       * Must have valid token to list a book
+       */
       if (!token) {
         this.message = "Your session has expired. Please log in again.";
         this.isError = true;
@@ -286,8 +407,30 @@ export default {
       }
 
       try {
-        // Do not send seller_id.
-        // The backend must get seller_id from the authenticated JWT.
+        /**
+         * ============================================
+         * STEP 5: SEND POST REQUEST
+         * ============================================
+         * Create a new product (book listing) on backend
+         *
+         * Request:
+         *   POST /api/products
+         *   {
+         *     title: string,
+         *     author: string,
+         *     course_code: string (optional),
+         *     price: number,
+         *     category_id: number,
+         *     condition_id: number
+         *   }
+         *
+         * Note: Do NOT send seller_id
+         * Backend extracts seller_id from JWT token
+         * This ensures user can only create listings for themselves
+         *
+         * Response:
+         *   { success: boolean, message: string, productId: number }
+         */
         const response = await axios.post(
           `${apiUrl}/api/products`,
           {
@@ -305,12 +448,18 @@ export default {
           },
         );
 
+        /**
+         * ============================================
+         * STEP 6: HANDLE SUCCESS RESPONSE
+         * ============================================
+         */
         if (response.data.success) {
+          // Show success message
           this.message = "Your book has been successfully listed!";
 
           this.isError = false;
 
-          // Reset form
+          // Reset form to empty state
           this.form = {
             title: "",
             author: "",
@@ -320,13 +469,13 @@ export default {
             condition_id: "",
           };
 
-          // Remove Bootstrap validation state
+          // Remove Bootstrap validation styling
           form.classList.remove("was-validated");
 
           // Reset validation flag
           this.formSubmitted = false;
 
-          // Scroll to the top
+          // Scroll to top to show success message
           window.scrollTo({
             top: 0,
             behavior: "smooth",
@@ -337,21 +486,40 @@ export default {
 
         this.isError = true;
 
+        /**
+         * ============================================
+         * STEP 7: HANDLE ERROR RESPONSE
+         * ============================================
+         * Show different message based on error type
+         */
         if (err.response?.status === 401) {
+          // Authentication failed (token expired)
           this.message = "Your session has expired. Please log in again.";
         } else if (err.response?.status === 403) {
+          // Authorization failed (not allowed to create listings)
           this.message = "You are not authorised to sell books.";
         } else if (err.response?.status === 400) {
+          // Validation error from backend
           this.message = err.response?.data?.message || "Please check the information you entered.";
         } else if (err.response?.status >= 500) {
+          // Server error
           this.message = "The server encountered a problem. Please try again.";
         } else if (err.request) {
+          // Network error (no response from backend)
           this.message =
             "Unable to connect to BookHive. Please make sure the backend server is running.";
         } else {
+          // Other error
           this.message = "Something went wrong while listing your book.";
         }
       } finally {
+        /**
+         * ============================================
+         * CLEANUP
+         * ============================================
+         * Always runs after try/catch, whether success or error
+         * Hide loading spinner
+         */
         this.isSubmitting = false;
       }
     },

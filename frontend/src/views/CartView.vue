@@ -228,46 +228,102 @@
 </template>
 
 <script>
+/**
+ * ============================================
+ * SHOPPING CART VIEW
+ * ============================================
+ * This page displays items in the user's shopping cart
+ * and handles the checkout process with PayFast payment.
+ *
+ * Features:
+ * - Display cart items in a table
+ * - Show order summary with pricing
+ * - Calculate platform fees (5%)
+ * - Handle PayFast payment integration
+ * - Show payment success/cancellation messages
+ */
+
 import axios from "axios";
 
 export default {
   name: "CartView",
 
+  /**
+   * Props passed from parent component (App.vue)
+   */
   props: {
+    /**
+     * cart: Array of items currently in shopping cart
+     */
     cart: {
       type: Array,
       required: true,
     },
 
+    /**
+     * user: Current logged-in user data
+     * Required for authentication and checkout
+     */
     user: {
       type: Object,
       default: null,
     },
   },
 
+  /**
+   * Events emitted to parent component (App.vue)
+   */
   emits: ["remove-from-cart", "clear-cart", "open-auth"],
 
+  /**
+   * ============================================
+   * DATA PROPERTIES
+   * ============================================
+   */
   data() {
     return {
+      /**
+       * Indicates whether checkout is in progress
+       * Shows loading spinner while redirecting to PayFast
+       */
       loading: false,
+
+      /**
+       * Error message displayed if checkout fails
+       */
       statusMessage: "",
+
+      /**
+       * Payment status after returning from PayFast
+       * Values: null (no payment), "success", "cancelled"
+       */
       paymentStatus: null,
     };
   },
 
+  /**
+   * ============================================
+   * COMPUTED PROPERTIES
+   * ============================================
+   */
   computed: {
-    /*
-     * Calculate the total of the books
-     * currently in the cart.
+    /**
+     * Calculate subtotal: Sum of all book prices
+     *
+     * Process:
+     * 1. Loop through each item in cart
+     * 2. Add price to running total
+     * 3. Return formatted to 2 decimal places
      */
     subtotalAmount() {
       return this.cart.reduce((sum, item) => sum + parseFloat(item.price), 0).toFixed(2);
     },
 
-    /*
-     * BookHive platform fee.
-     * The backend remains responsible for
-     * calculating the actual checkout amount.
+    /**
+     * Calculate 5% platform fee
+     * BookHive adds 5% fee to each purchase
+     *
+     * Formula: subtotal * 0.05
      */
     platformFee() {
       const subtotal = parseFloat(this.subtotalAmount);
@@ -275,8 +331,11 @@ export default {
       return (subtotal * 0.05).toFixed(2);
     },
 
-    /*
-     * Display total including the 5% platform fee.
+    /**
+     * Calculate final total: subtotal + platform fee
+     * This is the amount the customer pays
+     *
+     * Formula: subtotal + (subtotal * 0.05)
      */
     estimatedTotal() {
       const subtotal = parseFloat(this.subtotalAmount);
@@ -286,29 +345,44 @@ export default {
     },
   },
 
+  /**
+   * ============================================
+   * LIFECYCLE HOOKS
+   * ============================================
+   */
+
+  /**
+   * mounted(): Called after component loads
+   * Check if user has returned from PayFast payment
+   */
   mounted() {
-    /*
-     * Check whether the user has returned
-     * from PayFast.
+    /**
+     * Check query parameter for payment status
+     * URL examples:
+     * - /cart?payment=success → Payment successful
+     * - /cart?payment=cancelled → User cancelled payment
      */
     const payment = this.$route.query.payment;
 
     if (payment === "success") {
+      /**
+       * Payment was successful
+       * Show success message and clear cart
+       */
       this.paymentStatus = "success";
 
-      /*
-       * Clear the cart in App.vue.
-       */
+      // Clear cart in parent component (App.vue)
       this.$emit("clear-cart");
 
-      /*
-       * Remove payment query parameter
-       * from the URL.
-       */
+      // Remove query parameter from URL
       this.$router.replace({
         query: {},
       });
     } else if (payment === "cancelled") {
+      /**
+       * User cancelled payment on PayFast
+       * Show message but keep cart intact
+       */
       this.paymentStatus = "cancelled";
 
       this.$router.replace({
@@ -317,17 +391,42 @@ export default {
     }
   },
 
+  /**
+   * ============================================
+   * METHODS
+   * ============================================
+   */
   methods: {
+    /**
+     * ============================================
+     * payWithPayFast()
+     * ============================================
+     * Purpose: Initiate checkout and redirect to PayFast payment
+     *
+     * Process:
+     * 1. Validate user is authenticated
+     * 2. Create orders on backend for each cart item
+     * 3. Initiate payment with PayFast
+     * 4. Generate and submit PayFast form
+     * 5. Redirect user to PayFast payment page
+     *
+     * PayFast will handle payment, then redirect back with status
+     */
     async payWithPayFast() {
       this.loading = true;
       this.statusMessage = "";
 
+      // Get JWT token from localStorage
       const token = localStorage.getItem("token");
 
+      // Get backend API URL (from environment or default to localhost)
       const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-      /*
-       * Make sure the user has a token.
+      /**
+       * ============================================
+       * STEP 1: VALIDATE AUTHENTICATION
+       * ============================================
+       * User must have a valid JWT token
        */
       if (!token) {
         this.statusMessage = "Your session has expired. Please log in again.";
@@ -338,10 +437,24 @@ export default {
       }
 
       try {
-        // =========================================
-        // STEP 1: CREATE ORDERS
-        // =========================================
-
+        /**
+         * ============================================
+         * STEP 2: CREATE ORDERS ON BACKEND
+         * ============================================
+         * Backend creates orders for all cart items and calculates total
+         *
+         * Request:
+         *   POST /api/orders/checkout
+         *   { items: [{ product_id, ... }, ...] }
+         *
+         * Response:
+         *   {
+         *     success: true,
+         *     paymentReference: string (unique reference),
+         *     totalAmount: number (calculated by backend),
+         *     ...
+         *   }
+         */
         const orderRes = await axios.post(
           `${apiUrl}/api/orders/checkout`,
           {
@@ -354,33 +467,44 @@ export default {
           },
         );
 
+        // Check if order creation was successful
         if (!orderRes.data.success) {
           throw new Error(orderRes.data.message || "Failed to create orders.");
         }
 
-        /*
-         * Get the shared payment reference
-         * created by the backend.
+        /**
+         * Get payment reference from backend
+         * This is a unique ID for tracking the payment
          */
         const paymentReference = orderRes.data.paymentReference;
 
-        /*
-         * IMPORTANT:
-         *
-         * Use the total returned by the backend
-         * rather than trusting the frontend
-         * calculation.
+        /**
+         * IMPORTANT: Use total calculated by backend, not frontend
+         * Frontend calculation is just for display
+         * Backend calculation is authoritative for security
          */
         const totalAmount = orderRes.data.totalAmount;
 
         console.log("Payment Reference:", paymentReference);
-
         console.log("PayFast Total:", totalAmount);
 
-        // =========================================
-        // STEP 2: INITIATE PAYFAST
-        // =========================================
-
+        /**
+         * ============================================
+         * STEP 3: INITIATE PAYFAST PAYMENT
+         * ============================================
+         * Send payment details to PayFast
+         *
+         * Request:
+         *   POST /api/payments/payfast/initiate
+         *   { paymentReference, amount, item_name }
+         *
+         * Response:
+         *   {
+         *     success: true,
+         *     payfastUrl: string (PayFast payment page URL),
+         *     paymentData: { field1, field2, ... } (form data)
+         *   }
+         */
         const payRes = await axios.post(
           `${apiUrl}/api/payments/payfast/initiate`,
           {
@@ -395,21 +519,32 @@ export default {
           },
         );
 
+        // Check if PayFast initiation was successful
         if (!payRes.data.success) {
           throw new Error(payRes.data.message || "Failed to initiate PayFast.");
         }
 
-        // =========================================
-        // STEP 3: SUBMIT PAYFAST FORM
-        // =========================================
-
+        /**
+         * ============================================
+         * STEP 4: SUBMIT PAYFAST FORM
+         * ============================================
+         * Create a hidden form with PayFast data
+         * Submit it to PayFast's payment page
+         * This redirects the user to the PayFast checkout
+         */
         const { payfastUrl, paymentData } = payRes.data;
 
+        // Create a new form element
         const form = document.createElement("form");
 
+        // Set form to POST to PayFast
         form.method = "POST";
         form.action = payfastUrl;
 
+        /**
+         * Add all payment data as hidden input fields
+         * Example fields: merchant_id, amount, item_name, etc.
+         */
         for (const key in paymentData) {
           const input = document.createElement("input");
 
@@ -420,23 +555,37 @@ export default {
           form.appendChild(input);
         }
 
+        // Add form to DOM
         document.body.appendChild(form);
 
+        // Submit the form
+        // This redirects to PayFast payment page
         form.submit();
       } catch (error) {
         console.error("PayFast checkout error:", error);
 
+        /**
+         * ============================================
+         * ERROR HANDLING
+         * ============================================
+         * Show appropriate error message based on error type
+         */
         if (error.response?.status === 401) {
+          // Session expired
           this.statusMessage = "Your session has expired. Please log in again.";
         } else if (error.response?.status === 400) {
+          // Bad request (validation error)
           this.statusMessage =
             error.response?.data?.message || "There was a problem with your order.";
         } else if (error.response?.status >= 500) {
+          // Server error
           this.statusMessage = "The server encountered a problem. Please try again.";
         } else if (error.request) {
+          // Network error (backend not responding)
           this.statusMessage =
             "Unable to connect to BookHive. Please make sure the backend server is running.";
         } else {
+          // Other error
           this.statusMessage = error.message || "Failed to initiate PayFast checkout.";
         }
 
@@ -446,7 +595,6 @@ export default {
   },
 };
 </script>
-
 <style scoped>
 /* =========================================
    BOOKHIVE CART PAGE
