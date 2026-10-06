@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-
 # 📚 BookHive - Secondhand Book Marketplace
 
 A full-stack web application for students to buy and sell secondhand books efficiently. BookHive provides a seamless marketplace experience with secure authentication, real-time inventory management, and integrated payment processing.
